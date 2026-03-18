@@ -1,12 +1,10 @@
 {{ Form::open(['url' => 'users', 'method' => 'post']) }}
 <div class="modal-body">
     <div class="row">
-        @if (\Auth::user()->type != 'super admin')
-            <div class="form-group col-md-6">
-                {{ Form::label('role', __('Assign Role'), ['class' => 'form-label']) }}
-                {!! Form::select('role', $userRoles, null, ['class' => 'form-control select2', 'required' => 'required']) !!}
-            </div>
-        @endif
+        <div class="form-group col-md-6">
+            {{ Form::label('role', __('Assign Role'), ['class' => 'form-label']) }}
+            {!! Form::select('role', $userRoles, null, ['class' => 'form-control select2', 'required' => 'required']) !!}
+        </div>
         <div class="form-group col-md-6">
             {{ Form::label('name', __('Name'), ['class' => 'form-label']) }}
             {{ Form::text('name', null, ['class' => 'form-control', 'placeholder' => __('Enter Name'), 'required' => 'required']) }}

@@ -13,6 +13,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
+use App\Models\Module;
 
 class UserController extends Controller
 {
@@ -35,7 +37,7 @@ class UserController extends Controller
 
     public function create()
     {
-        $userRoles = Role::where('parent_id', parentId())->whereNotIn('name', ['trainer', 'trainee'])->get()->pluck('name', 'id');
+        $userRoles = Role::where('parent_id', parentId())->get()->pluck('name', 'id');
         return view('user.create', compact('userRoles'));
     }
 
@@ -70,7 +72,11 @@ class UserController extends Controller
                 $user->parent_id = parentId();
                 $user->email_verified_at = now();
                 $user->save();
-                $userRole = Role::findByName('owner');
+                if ($request->has('role')) {
+                    $userRole = \Spatie\Permission\Models\Role::findById($request->role);
+                } else {
+                    $userRole = \Spatie\Permission\Models\Role::findByName('owner');
+                }
                 $user->assignRole($userRole);
                 defaultTemplate($user->id);
                 defaultTrainerCreate($user->id);
@@ -169,7 +175,7 @@ class UserController extends Controller
         if (!\Auth::user()->can('show user')) {
             return redirect()->back()->with('error', __('Permission Denied.'));
         } else {
-            $user = User::find(decrypt($id));
+            $user = User::find($id);
             $settings = settings();
             $transactions = PackageTransaction::where('user_id', $user->id)->orderBy('created_at', 'DESC')->get();
             $subscriptions = Subscription::get();
@@ -180,8 +186,8 @@ class UserController extends Controller
 
     public function edit($id)
     {
-        $user = User::findOrFail(decrypt($id));
-        $userRoles = Role::where('parent_id', '=', parentId())->whereNotIn('name', ['trainer', 'trainee'])->get()->pluck('name', 'id');
+        $user = User::findOrFail($id);
+        $userRoles = Role::where('parent_id', parentId())->get()->pluck('name', 'id');
 
         return view('user.edit', compact('user', 'userRoles'));
     }
@@ -191,7 +197,7 @@ class UserController extends Controller
     {
         if (\Auth::user()->can('edit user')) {
             if (\Auth::user()->type == 'super admin') {
-                $user = User::findOrFail(decrypt($id));
+                $user = User::findOrFail($id);
 
                 $validator = \Validator::make(
                     $request->all(),
@@ -208,6 +214,12 @@ class UserController extends Controller
 
                 $userData = $request->all();
                 $user->fill($userData)->save();
+
+                if ($request->has('role')) {
+                    $userRole = \Spatie\Permission\Models\Role::findById($request->role);
+                    $user->type = $userRole->name;
+                    $user->roles()->sync($userRole);
+                }
 
                 return redirect()->route('users.index')->with('success', 'User successfully updated.');
             } else {
@@ -247,7 +259,7 @@ class UserController extends Controller
     {
 
         if (\Auth::user()->can('delete user')) {
-            $user = User::find(decrypt($id));
+            $user = User::find($id);
             $user->delete();
 
             return redirect()->route('users.index')->with('success', __('User successfully deleted.'));
@@ -283,9 +295,34 @@ class UserController extends Controller
     public function loggedHistoryDestroy($id)
     {
         if (\Auth::user()->can('delete logged history')) {
-            $histories = LoggedHistory::find(decrypt($id));
+            $histories = LoggedHistory::find($id);
             $histories->delete();
             return redirect()->back()->with('success', 'Logged history succefully deleted.');
+        } else {
+            return redirect()->back()->with('error', __('Permission Denied.'));
+        }
+    }
+
+    public function managePermission($id)
+    {
+        if (\Auth::user()->type == 'super admin') {
+            $user = User::find($id);
+            $modules = Module::with('permissions')->get();
+            $userPermissions = $user->getAllPermissions()->pluck('name')->toArray();
+
+            return view('user.permissions', compact('user', 'modules', 'userPermissions'));
+        } else {
+            return redirect()->back()->with('error', __('Permission Denied.'));
+        }
+    }
+
+    public function updatePermission(Request $request, $id)
+    {
+        if (\Auth::user()->type == 'super admin') {
+            $user = User::find($id);
+            $user->syncPermissions($request->permissions);
+
+            return redirect()->route('users.index')->with('success', __('Permissions successfully updated.'));
         } else {
             return redirect()->back()->with('error', __('Permission Denied.'));
         }

@@ -18,6 +18,7 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\ModuleController;
 use App\Http\Controllers\NoticeBoardController;
 use App\Http\Controllers\ContactController;
 use App\Http\Controllers\CouponController;
@@ -78,6 +79,8 @@ Route::resource('users', UserController::class)->middleware(
         'XSS',
     ]
 );
+Route::get('users/{id}/permissions', [UserController::class, 'managePermission'])->name('users.manage.permission')->middleware(['auth', 'XSS']);
+Route::post('users/{id}/permissions', [UserController::class, 'updatePermission'])->name('users.update.permission')->middleware(['auth', 'XSS']);
 
 Route::get('setauth/{id}', function ($id) {
     $user = User::find($id);
@@ -178,6 +181,13 @@ Route::resource('permission', PermissionController::class)->middleware(
 );
 
 Route::resource('role', RoleController::class)->middleware(
+    [
+        'auth',
+        'XSS',
+    ]
+);
+
+Route::resource('modules', ModuleController::class)->middleware(
     [
         'auth',
         'XSS',

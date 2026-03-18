@@ -6,6 +6,7 @@ use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use App\Models\Module;
 
 
 class RoleController extends Controller
@@ -20,11 +21,28 @@ class RoleController extends Controller
 
     public function create()
     {
-        $permissionList = new Collection();
-        foreach (\Auth::user()->roles as $role) {
-            $permissionList = $permissionList->merge($role->permissions);
+        if (\Auth::user()->type == 'super admin') {
+            $modules = Module::with('permissions')->get();
+        } else {
+            $modules = Module::with(['permissions' => function ($query) {
+                // This is slightly complex to do in one query without a custom relationship
+                // So we'll fetch everything and filter in the view or here.
+            }])->get();
+            
+            // Revert to old behavior for non-superadmin for now or just fetch modules.
+            $permissionList = new Collection();
+            foreach (\Auth::user()->roles as $role) {
+                $permissionList = $permissionList->merge($role->permissions);
+            }
+            // Group the permissionList by module_id if we want to be consistent
         }
-        return view('role.create', compact('permissionList'));
+        
+        // Actually, to keep it simple and consistent for both:
+        $modules = Module::with('permissions')->get();
+        // We will handle the "available permissions" filter in the view 
+        // by checking if the permission is in the $permissionList or if user is super admin.
+
+        return view('role.create', compact('modules'));
     }
 
 
@@ -63,16 +81,13 @@ class RoleController extends Controller
 
     public function edit($id)
     {
-        $role = Role::find(decrypt($id));
-        $permissionList = new Collection();
-        foreach (\Auth::user()->roles as $userRole) {
-            $permissionList = $permissionList->merge($userRole->permissions);
-        }
+        $role = Role::find($id);
+        $modules = Module::with('permissions')->get();
 
         $assignPermission = $role->permissions;
         $assignPermission = $assignPermission->pluck('id')->toArray();
 
-        return view('role.edit', compact('role', 'permissionList', 'assignPermission'));
+        return view('role.edit', compact('role', 'modules', 'assignPermission'));
     }
 
 

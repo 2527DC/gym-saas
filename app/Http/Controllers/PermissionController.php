@@ -20,7 +20,8 @@ class PermissionController extends Controller
     public function create()
     {
         $userRoles = Role::get()->pluck('name', 'id');
-        return view('user_permission.create', compact('userRoles'));
+        $modules = \App\Models\Module::get()->pluck('name', 'id');
+        return view('user_permission.create', compact('userRoles', 'modules'));
     }
 
 
@@ -37,16 +38,23 @@ class PermissionController extends Controller
             $messages = $validator->getMessageBag();
             return redirect()->back()->with('error', $messages->first());
         }
+
+        $moduleId = $request->module_id;
+        if (!empty($request->new_module)) {
+            $module = \App\Models\Module::firstOrCreate(['name' => strtolower($request->new_module)]);
+            $moduleId = $module->id;
+        }
+
         $permissions = explode(',', $request->title);
         foreach ($permissions as $permission) {
             $userPermission = new Permission();
             $userPermission->name = $permission;
+            $userPermission->module_id = $moduleId;
             $userPermission->save();
             if (!empty($request->user_roles)) {
                 foreach ($request->user_roles as $userRole) {
                     $role = Role::find($userRole);
-                    $permissionArr = Permission::where('name', $permission)->first();
-                    $role->givePermissionTo($permissionArr);
+                    $role->givePermissionTo($userPermission);
                 }
             }
         }

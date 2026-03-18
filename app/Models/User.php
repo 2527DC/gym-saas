@@ -156,7 +156,14 @@ class User extends Authenticatable
         'settings',
         'locker',
         'event',
-        'nutrition schedule',
-        'product'
+        'nutrition_schedule',
+        'product',
+        'role',
+        'permission',
+        'pricing',
+        'coupon',
+        'FAQ',
+        'Page',
+        'auth'
     ];
 }

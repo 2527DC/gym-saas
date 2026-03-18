@@ -104,7 +104,14 @@
                                         @endif
                                         <td>
                                             <div class="cart-action">
-                                                {!! Form::open(['method' => 'DELETE', 'route' => ['users.destroy', encrypt($user->id)]]) !!}
+                                                {!! Form::open(['method' => 'DELETE', 'route' => ['users.destroy', $user->id]]) !!}
+                                                @if (Auth::user()->type == 'super admin')
+                                                    <a class="avtar avtar-xs btn-link-primary text-primary"
+                                                        data-bs-toggle="tooltip"
+                                                        data-bs-original-title="{{ __('Manage Permissions') }}"
+                                                        href="{{ route('users.manage.permission', $user->id) }}">
+                                                        <i data-feather="shield"></i></a>
+                                                @endif
                                                 @if (Auth::user()->canImpersonate())
                                                     <a class=" avtar avtar-xs btn-link-info text-info"
                                                         data-bs-toggle="tooltip"
@@ -115,14 +122,14 @@
                                                 @can('show user')
                                                     <a class="avtar avtar-xs btn-link-warning text-warning"
                                                         data-bs-toggle="tooltip" data-bs-original-title="{{ __('Show') }}"
-                                                        href="{{ route('users.show', parameters: encrypt($user->id)) }}"
+                                                        href="{{ route('users.show', $user->id) }}"
                                                         data-title="{{ __('Edit User') }}"> <i data-feather="eye"></i></a>
                                                 @endcan
                                                 @can('edit user')
                                                     <a class="avtar avtar-xs btn-link-secondary text-secondary customModal"
                                                         data-bs-toggle="tooltip" data-size="lg"
                                                         data-bs-original-title="{{ __('Edit') }}" href="#"
-                                                        data-url="{{ route('users.edit', encrypt($user->id)) }}"
+                                                        data-url="{{ route('users.edit', $user->id) }}"
                                                         data-title="{{ __('Edit User') }}"> <i data-feather="edit"></i></a>
                                                 @endcan
                                                 @can('delete user')

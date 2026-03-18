@@ -31,6 +31,7 @@
                             <thead>
                                 <tr>
                                     <th>{{ __('Title') }}</th>
+                                    <th>{{ __('Module') }}</th>
                                     <th>{{ __('Roles') }}</th>
                                     <th class="text-right">{{ __('Action') }}</th>
                                 </tr>
@@ -39,6 +40,7 @@
                                 @foreach ($permissionData as $data)
                                     <tr>
                                         <td>{{ $data->name }} </td>
+                                        <td>{{ $data->module ? ucfirst($data->module->name) : __('No Module') }} </td>
                                         <td>{{ RoleName($data->id) }} </td>
                                         <td>
                                             <div class="cart-action">

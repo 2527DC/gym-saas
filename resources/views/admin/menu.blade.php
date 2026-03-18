@@ -37,10 +37,26 @@
                 </li>
                 @if (\Auth::user()->type == 'super admin')
                     @if (Gate::check('manage user'))
-                        <li class="pc-item {{ in_array($routeName, ['users.index', 'users.show']) ? 'active' : '' }}">
+                        <li class="pc-item {{ in_array($routeName, ['users.index', 'users.show', 'users.manage.permission']) ? 'active' : '' }}">
                             <a href="{{ route('users.index') }}" class="pc-link">
                                 <span class="pc-micon"><i class="ti ti-user-plus"></i></span>
                                 <span class="pc-mtext">{{ __('Customers') }}</span>
+                            </a>
+                        </li>
+                    @endif
+                    @if (Gate::check('manage role'))
+                        <li class="pc-item {{ in_array($routeName, ['role.index', 'role.create', 'role.edit']) ? 'active' : '' }}">
+                            <a href="{{ route('role.index') }}" class="pc-link">
+                                <span class="pc-micon"><i class="ti ti-users"></i></span>
+                                <span class="pc-mtext">{{ __('Roles') }}</span>
+                            </a>
+                        </li>
+                    @endif
+                    @if (Gate::check('manage permission'))
+                        <li class="pc-item {{ in_array($routeName, ['permission.index']) ? 'active' : '' }}">
+                            <a href="{{ route('permission.index') }}" class="pc-link">
+                                <span class="pc-micon"><i class="ti ti-lock"></i></span>
+                                <span class="pc-mtext">{{ __('Permissions') }}</span>
                             </a>
                         </li>
                     @endif
@@ -391,6 +407,17 @@
                         Gate::check('manage company settings') ||
                         Gate::check('manage seo settings') ||
                         Gate::check('manage google recaptcha settings'))
+                    <li class="pc-item pc-caption">
+                        <label>{{ __('Development') }}</label>
+                        <i class="ti ti-code"></i>
+                    </li>
+                    <li class="pc-item {{ in_array($routeName, ['modules.index']) ? 'active' : '' }}">
+                        <a href="{{ route('modules.index') }}" class="pc-link">
+                            <span class="pc-micon"><i class="ti ti-package"></i></span>
+                            <span class="pc-mtext">{{ __('Modules') }}</span>
+                        </a>
+                    </li>
+
                     <li class="pc-item pc-caption">
                         <label>{{ __('System Settings') }}</label>
                         <i class="ti ti-chart-arcs"></i>
