@@ -113,6 +113,11 @@ if (!function_exists('settingsKeys')) {
             "paystack_payment" => "off",
             "paystack_public_key" => "",
             "paystack_secret_key" => "",
+            "twilio_sid" => "",
+            "twilio_token" => "",
+            "twilio_from" => "",
+            "twilio_messaging_service_sid" => "",
+            "reminder_auto_schedule_days" => "7,3,1",
         ];
     }
 }
@@ -780,6 +785,19 @@ if (!function_exists('defaultTemplate')) {
 
                 ',
             ],
+            'membership_expiry' => [
+                'module' => 'membership_expiry',
+                'name' => 'Membership Expiry Reminder',
+                'short_code' => ['{company_name}', '{member_name}', '{expiry_date}', '{membership_type}'],
+                'subject' => 'Your membership at {company_name} is expiring soon!',
+                'templete' => '
+                    <p><strong>Dear {member_name},</strong></p>
+                    <p>Your {membership_type} membership at {company_name} will expire on <strong>{expiry_date}</strong>.</p>
+                    <p>Please renew your membership to continue enjoying our services.</p>
+                    <p>Thank you!</p>
+                ',
+                'sms_message' => 'Hi {member_name}, your {membership_type} membership at {company_name} expires on {expiry_date}. Please renew soon!',
+            ],
         ];
 
         $createdTemplates = [];
@@ -790,8 +808,10 @@ if (!function_exists('defaultTemplate')) {
             $template->name = $value['name'];
             $template->subject = $value['subject'];
             $template->message = $value['templete'];
+            $template->sms_message = $value['sms_message'] ?? '';
             $template->short_code = json_encode($value['short_code']);
             $template->enabled_email = 0;
+            $template->enabled_sms = 0;
             $template->parent_id = $id;
             $template->save();
 
@@ -987,6 +1007,12 @@ if (!function_exists('MessageReplace')) {
                 $user = User::find($assignLocker->user_id);
                 $search = ['{company_name}', '{company_email}', '{company_phone_number}', '{company_address}', '{company_currency}', '{user_name}', '{locker_id}'];
                 $replace = [$settings['company_name'], $settings['company_email'], $settings['company_phone'], $settings['company_address'], $settings['CURRENCY_SYMBOL'], $user->name, lockerPrefix() . $locker->id];
+            }
+            if ($notification->module == 'membership_expiry' || $notification->module == 'membership_expiry_reminder') {
+                $user = User::find($id);
+                $trainee = TraineeDetail::where('user_id', $user->id)->first();
+                $search = ['{company_name}', '{member_name}', '{expiry_date}', '{membership_type}'];
+                $replace = [$settings['company_name'], $user->name, dateFormat($trainee->membership_expiry_date), $trainee->membership->title];
             }
             $return['subject'] = str_replace($search, $replace, $notification->subject);
             $return['message'] = str_replace($search, $replace, $notification->message);

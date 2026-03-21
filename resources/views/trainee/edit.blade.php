@@ -265,6 +265,13 @@
                                                             'required' => 'required',
                                                         ]) !!}
                                                     </div>
+                                                    <div class="form-group col-md-6">
+                                                        {{ Form::label('communication_preference', __('Communication Preference'), ['class' => 'form-label']) }}
+                                                        {!! Form::select('communication_preference', ['sms' => 'SMS', 'email' => 'Email', 'both' => 'Both'], !empty($trainee->traineeDetail) ? $trainee->traineeDetail->communication_preference : 'email', [
+                                                            'class' => 'form-control select2',
+                                                            'required' => 'required',
+                                                        ]) !!}
+                                                    </div>
                                                     <div class="form-group col-md-6 mb-3">
                                                         {{ Form::label('profile', __('Profile'), ['class' => 'form-label']) }}
                                                         {{ Form::file('profile', ['class' => 'form-control', 'accept' => '.jpg,.png,.jpeg']) }}

@@ -81,7 +81,7 @@ class RoleController extends Controller
 
     public function edit($id)
     {
-        $role = Role::find($id);
+        $role = Role::find(decrypt($id));
         $modules = Module::with('permissions')->get();
 
         $assignPermission = $role->permissions;
@@ -93,7 +93,7 @@ class RoleController extends Controller
 
     public function update(Request $request, $id)
     {
-       $userRole = Role::find($id);
+       $userRole = Role::find(decrypt($id));
             $validator = \Validator::make(
                 $request->all(), [
                     'title' => 'required|unique:roles,name,' . $userRole->id . ',id,parent_id,' . parentId(),

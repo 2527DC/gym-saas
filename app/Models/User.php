@@ -164,6 +164,7 @@ class User extends Authenticatable
         'coupon',
         'FAQ',
         'Page',
-        'auth'
+        'auth',
+        'communication'
     ];
 }

@@ -378,6 +378,14 @@
                             </a>
                         </li>
                     @endif
+                    @if (Gate::check('view reminder logs'))
+                        <li class="pc-item {{ in_array($routeName, ['communication.index']) ? 'active' : '' }} ">
+                            <a href="{{ route('communication.index') }}" class="pc-link">
+                                <span class="pc-micon"><i class="ti ti-message-2"></i></span>
+                                <span class="pc-mtext">{{ __('Communication Logs') }}</span>
+                            </a>
+                        </li>
+                    @endif
                     @if (Gate::check('manage FAQ'))
                         <li class="pc-item {{ in_array($routeName, ['FAQ.index']) ? 'active' : '' }} ">
                             <a href="{{ route('FAQ.index') }}" class="pc-link">

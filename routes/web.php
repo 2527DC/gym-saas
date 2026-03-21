@@ -4,6 +4,7 @@ use App\Http\Controllers\AttendanceController;
 use App\Http\Controllers\Auth\VerifyEmailController;
 use App\Http\Controllers\AuthPageController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CommunicationController;
 use App\Http\Controllers\ClassesController;
 use App\Http\Controllers\EventController;
 use App\Http\Controllers\EventTypeController;
@@ -155,6 +156,8 @@ Route::group(
         Route::post('settings/smtp', [SettingController::class, 'smtpData'])->name('setting.smtp');
         Route::get('settings/smtp-test', [SettingController::class, 'smtpTest'])->name('setting.smtp.test');
         Route::post('settings/smtp-test', [SettingController::class, 'smtpTestMailSend'])->name('setting.smtp.testing');
+        Route::get('settings/sms-test', [CommunicationController::class, 'testSms'])->name('setting.sms.test');
+        Route::post('settings/sms-test', [CommunicationController::class, 'sendTestSms'])->name('setting.sms.testing');
         Route::post('settings/payment', [SettingController::class, 'paymentData'])->name('setting.payment');
         Route::post('settings/site-seo', [SettingController::class, 'siteSEOData'])->name('setting.site.seo');
         Route::post('settings/google-recaptcha', [SettingController::class, 'googleRecaptchaData'])->name('setting.google.recaptcha');
@@ -164,11 +167,17 @@ Route::group(
         Route::get('footer-setting', [SettingController::class, 'footerSetting'])->name('footerSetting');
         Route::post('settings/footer', [SettingController::class, 'footerData'])->name('setting.footer');
 
+        Route::post('settings/sms', [CommunicationController::class, 'settings'])->name('setting.sms');
         Route::get('language/{lang}', [SettingController::class, 'lanquageChange'])->name('language.change');
         Route::post('theme/settings', [SettingController::class, 'themeSettings'])->name('theme.settings');
-
-
     }
+);
+
+Route::resource('communication', CommunicationController::class)->middleware(
+    [
+        'auth',
+        'XSS',
+    ]
 );
 
 
@@ -309,7 +318,8 @@ Route::group(
         ],
     ],
     function () {
-        Route::resource('trainees', TraineeController::class);
+        Route::get('trainees/send-reminder/{id}', [TraineeController::class, 'sendReminder'])->name('trainees.sendReminder');
+Route::resource('trainees', TraineeController::class);
         Route::get('membership-renew/{id}', [TraineeController::class, 'membershipRenewal'])->name('membership.renew');
         Route::post('membership-renew-store', [TraineeController::class, 'membershipRenewalStore'])->name('membership.renew.store');
     }

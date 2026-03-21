@@ -101,6 +101,13 @@
                                                             data-title="{{ __('Edit Trainee') }}"> <i
                                                                 data-feather="edit"></i></a>
                                                     @endcan
+                                                    @can('send manual reminder')
+                                                        <a class="btn btn-icon avtar-xs btn-link-primary"
+                                                            data-bs-toggle="tooltip" data-size="lg"
+                                                            data-bs-original-title="{{ __('Send Manual Reminder') }}" 
+                                                            href="{{ route('trainees.sendReminder', encrypt($trainee->id)) }}">
+                                                            <i data-feather="send"></i></a>
+                                                    @endcan
                                                     @can('delete trainee')
                                                         <a class="btn btn-icon avtar-xs btn-link-danger confirm_dialog"
                                                             data-bs-toggle="tooltip"

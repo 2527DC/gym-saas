@@ -20,7 +20,7 @@
                     </div>
                 </div>
                 <div class="card-body">
-                    {{ Form::model($role, array('route' => array('role.update', $role->id), 'method' => 'PUT')) }}
+                    {{ Form::model($role, array('route' => array('role.update', encrypt($role->id)), 'method' => 'PUT')) }}
                     <div class="form-group">
                         {{ Form::label('title', __('Role Title'), ['class' => 'form-label']) }}
                         {{ Form::text('title', $role->name, array('class' => 'form-control', 'placeholder' => __('Enter role title'), in_array($role->name, ['tenant', 'maintainer']) ? 'readonly' : '')) }}

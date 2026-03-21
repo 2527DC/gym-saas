@@ -23,6 +23,7 @@ class TraineeDetail extends Model
         'trainer_assign',
         'membership_start_date',
         'membership_expiry_date',
+        'communication_preference',
         'gender',
         'assign_class',
         'document',

@@ -14,6 +14,7 @@ class Notification extends Model
         'name',
         'subject',
         'message',
+        'sms_message',
         'short_code',
         'enabled_email',
         'enabled_sms',

@@ -17,6 +17,7 @@ use App\Models\TrainerDetail;
 use App\Models\Type;
 use App\Models\User;
 use App\Models\Workout;
+use App\Models\Reminder;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
@@ -164,10 +165,13 @@ class TraineeController extends Controller
                 $traineeDetail->membership_plan = $request->membership_plan;
                 $traineeDetail->membership_start_date = $request->membership_start_date;
                 $traineeDetail->membership_expiry_date = $expiryDate;
+                $traineeDetail->communication_preference = $request->communication_preference;
                 $traineeDetail->document = $document;
                 $traineeDetail->parent_id = parentId();
                 $traineeDetail->status = 1;
                 $traineeDetail->save();
+
+                $this->scheduleReminders($trainee->id);
             }
 
             if (!empty($request->assign_class)) {
@@ -349,9 +353,12 @@ class TraineeController extends Controller
                 $traineeDetail->membership_plan = $request->membership_plan;
                 $traineeDetail->membership_start_date = $request->membership_start_date;
                 $traineeDetail->membership_expiry_date = $expiryDate;
+                $traineeDetail->communication_preference = $request->communication_preference;
                 $traineeDetail->document = $document;
                 $traineeDetail->status = $request->status;
                 $traineeDetail->save();
+
+                $this->scheduleReminders($id);
             }
 
             return redirect()->route('trainees.index')->with('success', 'Trainee successfully updated.');
@@ -446,6 +453,167 @@ class TraineeController extends Controller
         $traineeDetail->membership_expiry_date = $newExpiryDate;
         $traineeDetail->save();
 
+        $this->scheduleReminders($id);
+
         return redirect()->route('trainees.index')->with('success', 'Membership renewed successfully.');
+    }
+
+    private function scheduleReminders($userId)
+    {
+        $trainee = User::with('traineeDetail')->find($userId);
+        $settings = settings();
+        
+        // Cancel existing reminders first
+        $this->cancelReminders($userId);
+
+        if (!$trainee || !$trainee->traineeDetail) return;
+
+        $expiryDate = Carbon::parse($trainee->traineeDetail->membership_expiry_date);
+        $scheduleDays = explode(',', $settings['reminder_auto_schedule_days'] ?? '7,3,1');
+        
+        $notification = Notification::where('parent_id', parentId())->where('module', 'membership_expiry_reminder')->first();
+        if (!$notification) return;
+
+        foreach ($scheduleDays as $days) {
+            $scheduleDate = $expiryDate->copy()->subDays(trim($days));
+            
+            // Twilio allows scheduling between 1 hour and 35 days in advance
+            if ($scheduleDate->isFuture() && $scheduleDate->diffInHours(now()) >= 1) {
+                $reminder = new Reminder();
+                $reminder->user_id = $userId;
+                $reminder->type = 'membership_expiry';
+                $reminder->scheduled_at = $scheduleDate;
+                $reminder->status = 'pending';
+                $reminder->parent_id = parentId();
+                $reminder->save();
+
+                if (($trainee->traineeDetail->communication_preference == 'sms' || $trainee->traineeDetail->communication_preference == 'both') && $notification->enabled_sms == 1) {
+                    $this->scheduleTwilioSms($reminder, $trainee, $notification, $settings);
+                }
+            }
+        }
+    }
+
+    private function scheduleTwilioSms($reminder, $trainee, $notification, $settings)
+    {
+        $sid = $settings['twilio_sid'];
+        $token = $settings['twilio_token'];
+        $from = $settings['twilio_messaging_service_sid'] ?? $settings['twilio_from'];
+        
+        if (empty($sid) || empty($token) || empty($from)) return;
+
+        $body = MessageReplace($notification, $trainee->id)['message']; // Note: MessageReplace might need to handle sms_message specifically
+        // For now using the existing MessageReplace or adding a new one for SMS
+        if (!empty($notification->sms_message)) {
+            $body = str_replace(['{name}', '{expiry_date}'], [$trainee->name, $trainee->traineeDetail->membership_expiry_date], $notification->sms_message);
+        }
+
+        try {
+            $client = new \GuzzleHttp\Client();
+            $response = $client->request('POST', "https://api.twilio.com/2010-04-01/Accounts/$sid/Messages.json", [
+                'auth' => [$sid, $token],
+                'form_params' => [
+                    'To' => $trainee->phone_number,
+                    'From' => $from,
+                    'Body' => $body,
+                    'SendAt' => $reminder->scheduled_at->toIso8601String(),
+                    'ScheduleType' => 'fixed',
+                ]
+            ]);
+
+            $responseData = json_decode($response->getBody(), true);
+            if (isset($responseData['sid'])) {
+                $reminder->external_schedule_id = $responseData['sid'];
+                $reminder->save();
+            }
+        } catch (\Exception $e) {
+            \Log::error('Twilio Scheduling Error: ' . $e->getMessage());
+        }
+    }
+
+    private function cancelReminders($userId)
+    {
+        $reminders = Reminder::where('user_id', $userId)->where('status', 'pending')->get();
+        $settings = settings();
+        $sid = $settings['twilio_sid'];
+        $token = $settings['twilio_token'];
+
+        foreach ($reminders as $reminder) {
+            if ($reminder->external_schedule_id && $sid && $token) {
+                try {
+                    $client = new \GuzzleHttp\Client();
+                    $client->request('POST', "https://api.twilio.com/2010-04-01/Accounts/$sid/Messages/{$reminder->external_schedule_id}.json", [
+                        'auth' => [$sid, $token],
+                        'form_params' => [
+                            'Status' => 'canceled',
+                        ]
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('Twilio Cancellation Error: ' . $e->getMessage());
+                }
+            }
+            $reminder->status = 'canceled';
+            $reminder->save();
+        }
+    }
+
+    public function sendReminder($id)
+    {
+        $id = decrypt($id);
+        $trainee = User::with('traineeDetail')->find($id);
+        if (!$trainee || !$trainee->traineeDetail) {
+            return redirect()->back()->with('error', __('Trainee not found.'));
+        }
+
+        $notification = Notification::where('parent_id', parentId())->where('module', 'membership_expiry_reminder')->first();
+        if (!$notification || $notification->enabled_sms != 1) {
+            return redirect()->back()->with('error', __('SMS reminder is not enabled or template not found.'));
+        }
+
+        $settings = settings();
+        
+        $reminder = new Reminder();
+        $reminder->user_id = $trainee->id;
+        $reminder->type = 'manual_reminder';
+        $reminder->scheduled_at = now();
+        $reminder->status = 'sent';
+        $reminder->parent_id = parentId();
+        
+        $sid = $settings['twilio_sid'];
+        $token = $settings['twilio_token'];
+        $from = $settings['twilio_messaging_service_sid'] ?? $settings['twilio_from'];
+        
+        if (empty($sid) || empty($token) || empty($from)) {
+            return redirect()->back()->with('error', __('Twilio settings missing.'));
+        }
+
+        $body = !empty($notification->sms_message) 
+            ? str_replace(['{name}', '{expiry_date}'], [$trainee->name, $trainee->traineeDetail->membership_expiry_date], $notification->sms_message)
+            : MessageReplace($notification, $trainee->id)['message'];
+
+        try {
+            $client = new \GuzzleHttp\Client();
+            $response = $client->request('POST', "https://api.twilio.com/2010-04-01/Accounts/$sid/Messages.json", [
+                'auth' => [$sid, $token],
+                'form_params' => [
+                    'To' => $trainee->phone_number,
+                    'From' => $from,
+                    'Body' => $body,
+                ]
+            ]);
+
+            $responseData = json_decode($response->getBody(), true);
+            $reminder->external_schedule_id = $responseData['sid'] ?? null;
+            $reminder->sent_at = now();
+            $reminder->save();
+
+            return redirect()->back()->with('success', __('Reminder sent successfully via Twilio.'));
+        } catch (\Exception $e) {
+            \Log::error('Twilio Manual Send Error: ' . $e->getMessage());
+            $reminder->status = 'failed';
+            $reminder->response_log = $e->getMessage();
+            $reminder->save();
+            return redirect()->back()->with('error', __('Failed to send reminder: ') . $e->getMessage());
+        }
     }
 }
