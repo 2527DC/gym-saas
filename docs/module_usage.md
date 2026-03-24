@@ -28,3 +28,11 @@ The system uses **Anniversary-based Billing**.
 - **End Date**: The system automatically calculates the expiry date by adding the package duration to the start date. 
   - *Example*: if a member joins on **March 15th** with a **Monthly Package**, their membership will end on **April 15th**.
 - This ensures the member gets a full 30 days of access regardless of when they join in the month.
+
+### 3. Automated Onboarding SMS
+When you create a new trainee, the system now automatically sends a **Welcome SMS** if:
+1.  The **Communication Preference** is set to "SMS" or "Both".
+2.  The **Trainee Create** notification is enabled for SMS in settings.
+3.  Your **Twilio Configuration** is complete.
+
+This message is sent immediately upon the trainee's creation, using the phone number you provided.

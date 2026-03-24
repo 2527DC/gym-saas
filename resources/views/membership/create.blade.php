@@ -23,4 +23,7 @@
         </div>
     </div>
 </div>
+<div class="modal-footer">
+    {{Form::submit(__('Create'),array('class'=>'btn btn-secondary ml-10'))}}
+</div>
 {{Form::close()}}

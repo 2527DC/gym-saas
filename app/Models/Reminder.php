@@ -10,7 +10,7 @@ class Reminder extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
+        'trainee_id',
         'type',
         'scheduled_at',
         'sent_at',
@@ -22,6 +22,6 @@ class Reminder extends Model
 
     public function trainee()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->belongsTo(User::class, 'trainee_id');
     }
 }

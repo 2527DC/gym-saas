@@ -1,10 +1,10 @@
 @extends('layouts.app')
 @section('page-title')
-    {{ __('Email Notification Template') }}
+    {{ __('Notification Settings') }}
 @endsection
 @section('breadcrumb')
     <li class="breadcrumb-item"><a href="{{ route('dashboard') }}">{{ __('Dashboard') }}</a></li>
-    <li class="breadcrumb-item" aria-current="page"> {{ __('Email Notification Template') }}</li>
+    <li class="breadcrumb-item" aria-current="page"> {{ __('Notification Settings') }}</li>
 @endsection
 @push('script-page')
     <script src="{{ asset('assets/js/plugins/ckeditor/classic/ckeditor.js') }}"></script>
@@ -26,7 +26,7 @@
                 <div class="card-header">
                     <div class="row align-items-center g-2">
                         <div class="col">
-                            <h5>{{ __('Email Notification Template') }}</h5>
+                            <h5>{{ __('Notification Settings') }}</h5>
                         </div>
 
                     </div>
@@ -39,6 +39,7 @@
                                     <th>{{ __('Module') }}</th>
                                     <th>{{ __('Subject') }}</th>
                                     <th>{{ __('Email Enable') }}</th>
+                                    <th>{{ __('SMS Enable') }}</th>
                                     @if (Gate::check('edit notification') || Gate::check('delete notification'))
                                         <th>{{ __('Action') }}</th>
                                     @endif
@@ -52,6 +53,15 @@
                                         <td>
 
                                             @if ($item->enabled_email == 1)
+                                                <span class="d-inline badge text-bg-success">{{ __('Enable') }}</span>
+                                            @else
+                                                <span class="d-inline badge text-bg-danger">{{ __('Disable') }}</span>
+                                            @endif
+
+                                        </td>
+                                        <td>
+
+                                            @if ($item->enabled_sms == 1)
                                                 <span class="d-inline badge text-bg-success">{{ __('Enable') }}</span>
                                             @else
                                                 <span class="d-inline badge text-bg-danger">{{ __('Disable') }}</span>

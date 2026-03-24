@@ -374,7 +374,7 @@
                         <li class="pc-item {{ in_array($routeName, ['notification.index']) ? 'active' : '' }} ">
                             <a href="{{ route('notification.index') }}" class="pc-link">
                                 <span class="pc-micon"><i class="ti ti-bell"></i></span>
-                                <span class="pc-mtext">{{ __('Email Notification') }}</span>
+                                <span class="pc-mtext">{{ __('Notification Settings') }}</span>
                             </a>
                         </li>
                     @endif

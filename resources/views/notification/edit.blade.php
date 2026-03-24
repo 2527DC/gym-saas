@@ -26,12 +26,30 @@
         </div>
 
         <div class="form-group col-md-12">
+            {{ Form::label('sms_message', __('SMS Message'), ['class' => 'form-label']) }}
+            {!! Form::textarea('sms_message', $notification->sms_message, [
+                'class' => 'form-control',
+                'rows' => 5,
+            ]) !!}
+        </div>
+
+        <div class="form-group col-md-6">
             {{ Form::label('enabled_email', __('Enabled Email Notification'), ['class' => 'form-label']) }}
             <input class="form-check-input" type="hidden" name="enabled_email" value="0">
             <div class="form-check form-switch">
-                <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckChecked"
+                <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckCheckedEmail"
                     name="enabled_email" value="1" {{ $notification->enabled_email == 1 ? 'checked' : '' }}>
-                <label class="form-check-label" for="flexSwitchCheckChecked"></label>
+                <label class="form-check-label" for="flexSwitchCheckCheckedEmail"></label>
+            </div>
+        </div>
+
+        <div class="form-group col-md-6">
+            {{ Form::label('enabled_sms', __('Enabled SMS Notification'), ['class' => 'form-label']) }}
+            <input class="form-check-input" type="hidden" name="enabled_sms" value="0">
+            <div class="form-check form-switch">
+                <input class="form-check-input" type="checkbox" role="switch" id="flexSwitchCheckCheckedSMS"
+                    name="enabled_sms" value="1" {{ $notification->enabled_sms == 1 ? 'checked' : '' }}>
+                <label class="form-check-label" for="flexSwitchCheckCheckedSMS"></label>
             </div>
         </div>
 

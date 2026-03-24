@@ -188,17 +188,33 @@ class TraineeController extends Controller
             $notification->password = $request->password;
             $setting = settings();
             $errorMessage = '';
-            if (!empty($notification) && $notification->enabled_email == 1) {
+            if (!empty($notification)) {
+                \Log::info('Trainee Notification Found for: ' . $module . ' (SMS Enabled: ' . $notification->enabled_sms . ')');
                 $notification_responce = MessageReplace($notification, $trainee->id);
-                $data['subject'] = $notification_responce['subject'];
-                $data['message'] = $notification_responce['message'];
-                $data['module'] = $module;
-                $data['logo'] = $setting['company_logo'];
-                $to = $trainee->email;
+                
+                if ($notification->enabled_email == 1) {
+                    $data['subject'] = $notification_responce['subject'];
+                    $data['message'] = $notification_responce['message'];
+                    $data['module'] = $module;
+                    $data['logo'] = $setting['company_logo'];
+                    $to = $trainee->email;
 
-                $response = commonEmailSend($to, $data);
-                if ($response['status'] == 'error') {
-                    $errorMessage = $response['message'];
+                    $response = commonEmailSend($to, $data);
+                    if ($response['status'] == 'error') {
+                        $errorMessage = $response['message'];
+                    }
+                }
+
+                if ($notification->enabled_sms == 1 && (!empty($traineeDetail->communication_preference) && ($traineeDetail->communication_preference == 'sms' || $traineeDetail->communication_preference == 'both'))) {
+                    $smsBody = !empty($notification_responce['sms_message']) ? $notification_responce['sms_message'] : null;
+                    if ($smsBody) {
+                        $response = commonSmsSend($trainee->phone_number, $smsBody);
+                        if ($response['status'] == 'error') {
+                            $errorMessage .= ($errorMessage ? '<br>' : '') . $response['message'];
+                        }
+                    } else {
+                        \Log::warning('Onboarding SMS skipped: SMS message template is empty for module: ' . $module);
+                    }
                 }
             }
 
@@ -533,7 +549,7 @@ class TraineeController extends Controller
 
     private function cancelReminders($userId)
     {
-        $reminders = Reminder::where('user_id', $userId)->where('status', 'pending')->get();
+        $reminders = Reminder::where('trainee_id', $userId)->where('status', 'pending')->get();
         $settings = settings();
         $sid = $settings['twilio_sid'];
         $token = $settings['twilio_token'];
@@ -573,7 +589,7 @@ class TraineeController extends Controller
         $settings = settings();
         
         $reminder = new Reminder();
-        $reminder->user_id = $trainee->id;
+        $reminder->trainee_id = $trainee->id;
         $reminder->type = 'manual_reminder';
         $reminder->scheduled_at = now();
         $reminder->status = 'sent';

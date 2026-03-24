@@ -871,6 +871,51 @@ if (!function_exists('commonEmailSend')) {
     }
 }
 
+if (!function_exists('commonSmsSend')) {
+    function commonSmsSend($to, $message)
+    {
+        $settings = settings();
+        $sid = $settings['twilio_sid'];
+        $token = $settings['twilio_token'];
+        $from = !empty($settings['twilio_messaging_service_sid']) ? $settings['twilio_messaging_service_sid'] : $settings['twilio_from'];
+
+        if (empty($sid) || empty($token) || empty($from)) {
+            return [
+                'status' => 'error',
+                'message' => __('Twilio credentials are not set.'),
+            ];
+        }
+
+        // Automatic + prefix for Indian numbers or others if missing
+        if (!empty($to) && !str_starts_with($to, '+')) {
+            $to = '+' . $to;
+        }
+
+        try {
+            $client = new \GuzzleHttp\Client();
+            $response = $client->request('POST', "https://api.twilio.com/2010-04-01/Accounts/$sid/Messages.json", [
+                'auth' => [$sid, $token],
+                'form_params' => [
+                    'From' => $from,
+                    'To' => $to,
+                    'Body' => $message,
+                ]
+            ]);
+
+            return [
+                'status' => 'success',
+                'message' => __('SMS successfully sent'),
+            ];
+        } catch (\Exception $e) {
+            \Log::error('Twilio Error: ' . $e->getMessage());
+            return [
+                'status' => 'error',
+                'message' => __('Twilio Error: ') . $e->getMessage(),
+            ];
+        }
+    }
+}
+
 
 if (!function_exists('emailSettings')) {
     function emailSettings($id)
@@ -961,13 +1006,13 @@ if (!function_exists('MessageReplace')) {
                 $user = User::find($id);
                 $trainee = TraineeDetail::where('user_id', $user->id)->first();
                 $search = ['{company_name}', '{company_email}', '{company_phone_number}', '{company_address}', '{company_currency}', '{new_user_name}', '{app_link}', '{username}', '{password}', '{membership}', '{membership_start_date}', '{trainer}'];
-                $replace = [$settings['company_name'], $settings['company_email'], $settings['company_phone'], $settings['company_address'], $settings['CURRENCY_SYMBOL'], $user->name, env('APP_URL'), $user->email, $notification['password'], $trainee->membership->title, dateFormat($trainee->membership_start_date), $trainee->trainers->name];
+                $replace = [$settings['company_name'], $settings['company_email'], $settings['company_phone'], $settings['company_address'], $settings['CURRENCY_SYMBOL'], $user->name, env('APP_URL'), $user->email, $notification['password'], $trainee->membership->title ?? '', dateFormat($trainee->membership_start_date), $trainee->trainers->name ?? ''];
             }
             if ($notification->module == 'trainer_assign') {
                 $user = User::find($id);
                 $trainee = TraineeDetail::where('user_id', $user->id)->first();
                 $search = ['{company_name}', '{company_email}', '{company_phone_number}', '{company_address}', '{company_currency}', '{new_user_name}', '{membership}', '{membership_start_date}', '{trainer_name}', '{phone_number}'];
-                $replace = [$settings['company_name'], $settings['company_email'], $settings['company_phone'], $settings['company_address'], $settings['CURRENCY_SYMBOL'], $user->name, $trainee->membership->title, dateFormat($trainee->membership_start_date), $trainee->trainers->name, $user->phone_number];
+                $replace = [$settings['company_name'], $settings['company_email'], $settings['company_phone'], $settings['company_address'], $settings['CURRENCY_SYMBOL'], $user->name, $trainee->membership->title ?? '', dateFormat($trainee->membership_start_date), $trainee->trainers->name ?? '', $user->phone_number];
             }
             if ($notification->module == 'new_classes') {
                 $class = Classes::find($id);
@@ -1012,10 +1057,11 @@ if (!function_exists('MessageReplace')) {
                 $user = User::find($id);
                 $trainee = TraineeDetail::where('user_id', $user->id)->first();
                 $search = ['{company_name}', '{member_name}', '{expiry_date}', '{membership_type}'];
-                $replace = [$settings['company_name'], $user->name, dateFormat($trainee->membership_expiry_date), $trainee->membership->title];
+                $replace = [$settings['company_name'], $user->name, dateFormat($trainee->membership_expiry_date), $trainee->membership->title ?? ''];
             }
             $return['subject'] = str_replace($search, $replace, $notification->subject);
             $return['message'] = str_replace($search, $replace, $notification->message);
+            $return['sms_message'] = str_replace($search, $replace, $notification->sms_message);
         }
 
         return $return;
